@@ -6,6 +6,9 @@ from AdBlock import AdBlockInterceptor
 from session import load_session
 from BrowserWindow import BrowserWindow
 
+import os
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--disable-logging"
+
 WHITELIST = [
     "vider.info", "aternos.org", "vider.pl"
 ]
