@@ -11,8 +11,7 @@ class BrowserTab(QWidget):
         self.view.setPage(page)
         self.view.setUrl(QUrl(url))
         self.layout.addWidget(self.view)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 3, 0, 0)
         self.setLayout(self.layout)
 
         self.view.iconChanged.connect(self._on_icon_changed)

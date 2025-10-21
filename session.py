@@ -3,7 +3,13 @@ import os
 
 SESSION_FILE = "session.json"
 
-def gather_session(instances):
+def gather_session():
+    try:
+        from BrowserWindow import BrowserWindow
+        instances = getattr(BrowserWindow, "instances", []) or []
+    except Exception:
+        instances = []
+
     data = []
     for w in instances:
         win_tabs = []
@@ -14,8 +20,8 @@ def gather_session(instances):
         data.append(win_tabs)
     return data
 
-def save_full_session(instances):
-    data = gather_session(instances)
+def save_full_session():
+    data = gather_session()
     try:
         with open(SESSION_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)

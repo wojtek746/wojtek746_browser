@@ -10,7 +10,7 @@ class TabBar(QTabBar):
         super().__init__(parent)
         self._plus_width = 18
         self._plus_margin = 6
-        self._min_tab_width = 10
+        self._min_tab_width = 20
         self._max_tab_width = 100
         self.setCursor(Qt.ArrowCursor)
         self.setElideMode(Qt.ElideRight)

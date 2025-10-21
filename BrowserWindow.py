@@ -156,11 +156,9 @@ class BrowserWindow(QMainWindow):
         w.show()
 
     def closeEvent(self, event):
-        # On close, remove from instances and if last, save session
+        save_full_session()
         if self in BrowserWindow.instances:
             BrowserWindow.instances.remove(self)
-        if not BrowserWindow.instances:
-            save_full_session(BrowserWindow.instances)
         event.accept()
 
     def current_view(self):
