@@ -16,7 +16,8 @@ def gather_session():
         for i in range(w.tabs.count()):
             tab = w.tabs.widget(i)
             url = tab.view.url().toString()
-            win_tabs.append(url)
+            if url != "about:blank":
+                win_tabs.append(url)
         data.append(win_tabs)
     return data
 

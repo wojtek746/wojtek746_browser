@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QMainWindow, QTabWidget, QLineEdit, QPushButton, QWi
 from PyQt5.QtWebEngineWidgets import QWebEngineProfile
 from PyQt5.QtCore import QUrl
 
+from LazyBrowserTab import LazyBrowserTab
 from session import save_full_session
 from BrowserTab import BrowserTab
 from TabBar import TabBar
@@ -76,8 +77,18 @@ class BrowserWindow(QMainWindow):
         self.showMaximized()
 
         if self.tabs_urls:
+            self.tabs.blockSignals(True)
+            self.custom_tab_bar.blockSignals(True)
+
+            self.add_tab("about:blank", suspended=False)
             for u in self.tabs_urls:
-                self.add_tab(u)
+                self.add_tab(u, True)
+
+            self.tabs.blockSignals(False)
+            self.custom_tab_bar.blockSignals(False)
+
+            self.tabs.setCurrentIndex(0)
+            self.custom_tab_bar.setCurrentIndex(0)
         else:
             self.add_tab(SRTART_TAB)
 
@@ -86,38 +97,28 @@ class BrowserWindow(QMainWindow):
 
         BrowserWindow.instances.append(self)
 
-    def add_tab(self, url="about:blank", *args, **kwargs):
+    def add_tab(self, url="about:blank", suspended=False, *args, **kwargs):
         if isinstance(url, bool):
             url = "about:blank"
         if not isinstance(url, str):
             url = "about:blank"
-        tab = BrowserTab(self.profile, url)
+
+        if suspended:
+            tab = LazyBrowserTab(self.profile, url, loaded=False)
+        else:
+            tab = BrowserTab(self.profile, url)
+
         i = self.tabs.addTab(tab, "")
         self.tabs.setCurrentIndex(i)
 
         idx = self.custom_tab_bar.addTab("Nowa Karta")
         self.custom_tab_bar.setCurrentIndex(idx)
 
-        def on_title_changed(new_title, t=tab, pos=idx):
-            title_text = new_title if new_title else QUrl(t.view.url().toString()).host()
-            if pos < self.custom_tab_bar.count():
-                self.custom_tab_bar.setTabText(pos, title_text)
-
-        def on_icon_changed(icon, t=tab, pos=idx):
-            if icon.isNull():
-                return
-            if pos < self.custom_tab_bar.count():
-                self.custom_tab_bar.setTabIcon(pos, icon)
-
-        def on_url_changed(qurl, t=tab, pos=idx):
-            if self.tabs.currentIndex() == pos:
-                self.addr.setText(qurl.toString())
-            if pos < self.custom_tab_bar.count():
-                self.custom_tab_bar.setTabToolTip(pos, qurl.toString())
-
-        tab.view.iconChanged.connect(on_icon_changed)
-        tab.view.titleChanged.connect(on_title_changed)
-        tab.view.urlChanged.connect(on_url_changed)
+        if not suspended:
+            tab.view.titleChanged.connect(lambda new_title, t=tab: self._set_tab_text_safe(t))
+            tab.view.iconChanged.connect(lambda icon, t=tab: self._set_tab_icon_safe(t, icon))
+            tab.view.urlChanged.connect(
+                lambda qurl, t=tab: (self.addr.setText(qurl.toString()) if self.tabs.currentWidget() is t else None))
 
         if idx is not None:
             self.custom_tab_bar.setTabToolTip(idx, url)
@@ -145,11 +146,28 @@ class BrowserWindow(QMainWindow):
             cur.view.setUrl(QUrl(text))
 
     def update_address_bar(self, index):
+        print("update")
         cur = self.tabs.widget(index)
         if cur and hasattr(cur, "view"):
             self.addr.setText(cur.view.url().toString())
         else:
             self.addr.setText("")
+
+        if type(cur).__name__ == "LazyBrowserTab" and not cur.loaded and hasattr(cur, "url"):
+            try:
+                lazy = cur
+                lazy.loaded = True
+                cur_idx = index
+                real_tab = BrowserTab(self.profile, lazy.url)
+                self.tabs.insertTab(cur_idx, real_tab, "Ładuję...")
+                self.tabs.setCurrentIndex(cur_idx)
+                self.tabs.removeTab(cur_idx + 1)
+
+                real_tab.view.titleChanged.connect(lambda new_title, rt=real_tab: self._set_tab_text_safe(rt))
+                real_tab.view.iconChanged.connect(lambda icon, rt=real_tab: self._set_tab_icon_safe(rt, icon))
+                real_tab.view.urlChanged.connect(lambda qurl, rt=real_tab: (self.addr.setText(qurl.toString()) if self.tabs.currentWidget() is rt else None))
+            except Exception:
+                pass
 
     def open_new_window(self):
         w = BrowserWindow(self.profile, tabs_urls=["https://www.google.com"])
@@ -179,3 +197,39 @@ class BrowserWindow(QMainWindow):
         v = self.current_view()
         if v:
             v.reload()
+
+    def _set_tab_text_safe(self, tab_obj, text=None):
+        try:
+            idx = self.tabs.indexOf(tab_obj)
+            if idx == -1:
+                return
+            if text is None:
+                # spróbuj pobrać tytuł z view, potem host z url
+                if hasattr(tab_obj, "view") and tab_obj.view:
+                    t = tab_obj.view.title()
+                    text = t if t else QUrl(tab_obj.view.url().toString()).host()
+                else:
+                    text = QUrl(getattr(tab_obj, "url", "") or "").host()
+            # jeśli masz custom_tab_bar, aktualizuj jego etykietę, inaczej QTabWidget
+            if hasattr(self, "custom_tab_bar"):
+                if idx < self.custom_tab_bar.count():
+                    self.custom_tab_bar.setTabText(idx, text)
+            else:
+                self.tabs.setTabText(idx, text)
+        except Exception:
+            pass
+
+    def _set_tab_icon_safe(self, tab_obj, icon):
+        try:
+            idx = self.tabs.indexOf(tab_obj)
+            if idx == -1:
+                return
+            if icon is None:
+                return
+            if hasattr(self, "custom_tab_bar"):
+                if idx < self.custom_tab_bar.count():
+                    self.custom_tab_bar.setTabIcon(idx, icon)
+            else:
+                self.tabs.setTabIcon(idx, icon)
+        except Exception:
+            pass
