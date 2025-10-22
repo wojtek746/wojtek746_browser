@@ -1,10 +1,12 @@
 from PyQt5.QtCore import pyqtSignal, Qt, QRect
 from PyQt5.QtGui import QPainter, QPen, QFont
-from PyQt5.QtWidgets import QTabBar
+from PyQt5.QtWidgets import QTabBar, QMenu
+
 
 class TabBar(QTabBar):
     addTabRequested = pyqtSignal()
     closeTabRequested = pyqtSignal(int)
+    copyTabRequested = pyqtSignal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -16,6 +18,22 @@ class TabBar(QTabBar):
         self.setElideMode(Qt.ElideRight)
         self.setExpanding(False)
         self._last_plus_rect = QRect()
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._open_context_menu)
+
+    def _open_context_menu(self, pos):
+        index = self.tabAt(pos)
+        if index == -1:
+            return
+        menu = QMenu(self)
+        copy_action = menu.addAction("Skopiuj kartę")
+        close_action = menu.addAction("Zamknij kartę")
+        action = menu.exec_(self.mapToGlobal(pos))
+        if action == copy_action:
+            self.copyTabRequested.emit(index)
+        elif action == close_action:
+            self.closeTabRequested.emit(index)
 
     def tabSizeHint(self, index): #rozmiar tabów
         base = super().tabSizeHint(index)

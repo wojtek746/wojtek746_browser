@@ -24,6 +24,7 @@ class BrowserWindow(QMainWindow):
         self.custom_tab_bar = TabBar()
         self.custom_tab_bar.addTabRequested.connect(lambda: self.add_tab(SRTART_TAB))
         self.custom_tab_bar.closeTabRequested.connect(self.close_tab)
+        self.custom_tab_bar.copyTabRequested.connect(lambda idx: self.copy_tab(idx))
         self.custom_tab_bar.currentChanged.connect(lambda idx: self.tabs.setCurrentIndex(idx))
 
         # ---------------- URL/navigation row (back/forward/refresh + adres) ----------------
@@ -140,6 +141,33 @@ class BrowserWindow(QMainWindow):
 
         if self.tabs.count() == 0:
             self.close()
+
+    def copy_tab(self, index):
+        cur = self.tabs.widget(index)
+        if cur and hasattr(cur, "view"):
+            url = cur.view.url().toString()
+            self.add_tab(url)
+            c = self.tabs.count()
+            print(c)
+            print(index)
+            print(c - index + 2)
+            self.move_tab(c - 1, index - c + 2)
+
+    def move_tab(self, index, num):
+        print(index + num)
+        if 0 <= index + num < self.tabs.count():
+            widget = self.tabs.widget(index)
+            icon = self.custom_tab_bar.tabIcon(index)
+            text = self.custom_tab_bar.tabText(index)
+
+            self.tabs.removeTab(index)
+            self.tabs.insertTab(index + num, widget, "")
+            self.custom_tab_bar.removeTab(index)
+            self.custom_tab_bar.insertTab(index + num, icon, text)
+            self.custom_tab_bar.setCurrentIndex(index + num)
+            self.tabs.setCurrentIndex(index + num)
+        else:
+            print("złe przesunięcie")
 
     def load_from_bar(self):
         text = self.addr.text().strip()
