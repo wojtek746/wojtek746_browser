@@ -105,14 +105,20 @@ class BrowserWindow(QMainWindow):
 
         if suspended:
             tab = LazyBrowserTab(self.profile, url, loaded=False)
+            title = getattr(tab, "cached_title", "Nowa Karta")
+            icon = getattr(tab, "cached_icon", None)
         else:
             tab = BrowserTab(self.profile, url)
+            title = "Nowa Karta"
+            icon = None
 
         i = self.tabs.addTab(tab, "")
         self.tabs.setCurrentIndex(i)
 
-        idx = self.custom_tab_bar.addTab("Nowa Karta")
+        idx = self.custom_tab_bar.addTab(title)
         self.custom_tab_bar.setCurrentIndex(idx)
+        if icon:
+            self.custom_tab_bar.setTabIcon(idx, icon)
 
         if not suspended:
             tab.view.titleChanged.connect(lambda new_title, t=tab: self._set_tab_text_safe(t))
@@ -146,7 +152,6 @@ class BrowserWindow(QMainWindow):
             cur.view.setUrl(QUrl(text))
 
     def update_address_bar(self, index):
-        print("update")
         cur = self.tabs.widget(index)
         if cur and hasattr(cur, "view"):
             self.addr.setText(cur.view.url().toString())
@@ -175,8 +180,8 @@ class BrowserWindow(QMainWindow):
 
     def closeEvent(self, event):
         save_full_session()
-        if self in BrowserWindow.instances:
-            BrowserWindow.instances.remove(self)
+        for w in BrowserWindow.instances[:]:
+            w.close()
         event.accept()
 
     def current_view(self):

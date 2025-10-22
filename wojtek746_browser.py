@@ -27,6 +27,12 @@ def main():
         except Exception:
             pass
 
+    cache_path = os.path.join(os.getcwd(), "browser_cache")
+    profile.setCachePath(cache_path)
+    profile.setPersistentStoragePath(cache_path)
+    profile.setPersistentCookiesPolicy(QWebEngineProfile.ForcePersistentCookies)
+    profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
+
     sess = load_session()
     if sess:
         for win_tabs in sess:

@@ -1,3 +1,6 @@
+import json
+import os
+
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage
 from PyQt5.QtCore import QUrl
@@ -26,6 +29,19 @@ class BrowserTab(QWidget):
         if not ok:
             return
         url = self.view.url().toString()
+        title = self.view.title()
+        path = os.path.join(os.getcwd(), "session_titles.json")
+        try:
+            data = {}
+            if os.path.exists(path):
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            data[url] = title
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+        except Exception:
+            pass
+
         # If YouTube, inject ad-skip JS
         if "youtube.com/watch" in url:
             js_skip = """
@@ -48,3 +64,16 @@ class BrowserTab(QWidget):
             idx = parent_tabs.indexOf(self)
             if idx != -1:
                 parent_tabs.setTabIcon(idx, icon)
+        try:
+            path = os.path.join(os.getcwd(), "session_icons")
+            os.makedirs(path, exist_ok=True)
+            url = self.view.url().toString()
+            host = QUrl(url).host().replace(":", "_")
+            if not host:
+                return
+            icon_path = os.path.join(path, f"{host}.png")
+            pixmap = icon.pixmap(32, 32)
+            if not pixmap.isNull():
+                pixmap.save(icon_path, "PNG")
+        except Exception:
+            pass

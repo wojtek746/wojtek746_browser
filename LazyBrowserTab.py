@@ -1,3 +1,7 @@
+import json
+import os
+
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
 from PyQt5.QtCore import QUrl, pyqtSignal
@@ -18,8 +22,29 @@ class LazyBrowserTab(QWidget):
         super().__init__()
         self.profile = profile
         self.url = url or "about:blank"
+
+        title = "Nowa Karta"
+        path = os.path.join(os.getcwd(), "session_titles.json")
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                title = data.get(self.url, "Nowa Karta")
+            except Exception:
+                pass
+
+        icon = None
+        host = QUrl(self.url).host().replace(":", "_")
+        icon_path = os.path.join(os.getcwd(), "session_icons", f"{host}.png")
+        if os.path.exists(icon_path):
+            pixmap = QPixmap(icon_path)
+            if not pixmap.isNull():
+                icon = QIcon(pixmap)
+
         self.view = LazyBrowserTab.DummyView(self.url)
         self.loaded = loaded
+        self.cached_title = title
+        self.cached_icon = icon
 
     def setUrl(self, url):
         self.url = url

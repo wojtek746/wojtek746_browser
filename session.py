@@ -1,9 +1,14 @@
 import json
 import os
+from PyQt5.QtGui import QPixmap
 
 SESSION_FILE = "session.json"
+IMG_DIR = "img"
 
 def gather_session():
+    if not os.path.exists(IMG_DIR):
+        os.makedirs(IMG_DIR, exist_ok=True)
+
     try:
         from BrowserWindow import BrowserWindow
         instances = getattr(BrowserWindow, "instances", []) or []
@@ -15,7 +20,8 @@ def gather_session():
         win_tabs = []
         for i in range(w.tabs.count()):
             tab = w.tabs.widget(i)
-            url = tab.view.url().toString()
+            view = getattr(tab, "view", None)
+            url = view.url().toString()
             if url != "about:blank":
                 win_tabs.append(url)
         data.append(win_tabs)
