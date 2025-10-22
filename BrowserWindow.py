@@ -20,12 +20,14 @@ class BrowserWindow(QMainWindow):
         self.setWindowTitle("Wojtek746 Browser")
         self.resize(1400, 700)
 
-        # ---------------- Tabs (QTabWidget + CustomTabBar) ----------------
+        # ---------------- CustomTabBar ----------------
         self.custom_tab_bar = TabBar()
         self.custom_tab_bar.addTabRequested.connect(lambda: self.add_tab(SRTART_TAB))
         self.custom_tab_bar.closeTabRequested.connect(self.close_tab)
         self.custom_tab_bar.copyTabRequested.connect(lambda idx: self.copy_tab(idx))
         self.custom_tab_bar.currentChanged.connect(lambda idx: self.tabs.setCurrentIndex(idx))
+        self.custom_tab_bar.tabMoved.connect(self._on_tab_moved)
+
 
         # ---------------- URL/navigation row (back/forward/refresh + adres) ----------------
         urls = QWidget()
@@ -148,26 +150,32 @@ class BrowserWindow(QMainWindow):
             url = cur.view.url().toString()
             self.add_tab(url)
             c = self.tabs.count()
-            print(c)
-            print(index)
-            print(c - index + 2)
-            self.move_tab(c - 1, index - c + 2)
+            self.move_tab(c - 1, index)
 
-    def move_tab(self, index, num):
-        print(index + num)
-        if 0 <= index + num < self.tabs.count():
-            widget = self.tabs.widget(index)
-            icon = self.custom_tab_bar.tabIcon(index)
-            text = self.custom_tab_bar.tabText(index)
+    def move_tab(self, from_index, to_index):
+        if from_index == to_index:
+            return
 
-            self.tabs.removeTab(index)
-            self.tabs.insertTab(index + num, widget, "")
-            self.custom_tab_bar.removeTab(index)
-            self.custom_tab_bar.insertTab(index + num, icon, text)
-            self.custom_tab_bar.setCurrentIndex(index + num)
-            self.tabs.setCurrentIndex(index + num)
-        else:
-            print("złe przesunięcie")
+        widget = self.tabs.widget(from_index)
+        icon = self.custom_tab_bar.tabIcon(from_index)
+        text = self.custom_tab_bar.tabText(from_index)
+
+        self.tabs.removeTab(from_index)
+        self.tabs.insertTab(to_index, widget, "")
+        self.custom_tab_bar.removeTab(from_index)
+        self.custom_tab_bar.insertTab(to_index, icon, text)
+        self.custom_tab_bar.setCurrentIndex(to_index)
+        self.tabs.setCurrentIndex(to_index)
+
+    def _on_tab_moved(self, from_index, to_index):
+        if from_index == to_index:
+            return
+
+        widget = self.tabs.widget(from_index)
+
+        self.tabs.removeTab(from_index)
+        self.tabs.insertTab(to_index, widget, "")
+        self.tabs.setCurrentIndex(to_index)
 
     def load_from_bar(self):
         text = self.addr.text().strip()

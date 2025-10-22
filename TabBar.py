@@ -17,6 +17,7 @@ class TabBar(QTabBar):
         self.setCursor(Qt.ArrowCursor)
         self.setElideMode(Qt.ElideRight)
         self.setExpanding(False)
+        self.setMovable(True)
         self._last_plus_rect = QRect()
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
