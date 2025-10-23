@@ -5,6 +5,8 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage
 from PyQt5.QtCore import QUrl, Qt
 
+from ContextMenu import CustomContextMenu
+
 
 class BrowserTab(QWidget):
     def __init__(self, profile: QWebEngineProfile, url="about:blank"):
@@ -19,12 +21,14 @@ class BrowserTab(QWidget):
         self.setLayout(self.layout)
 
         self.view.iconChanged.connect(self._on_icon_changed)
-        self.view.urlChanged.connect(self.on_url_changed)
         self.view.loadFinished.connect(self.on_load_finished)
 
-    def on_url_changed(self, qurl):
-        # can be used to update UI externally
-        pass
+        self.menu = CustomContextMenu()
+        self.view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.view.customContextMenuRequested.connect(self._context_menu)
+
+    def _context_menu(self, pos):
+        self.menu._context_menu(self, pos)
 
     def on_load_finished(self, ok):
         if not ok:
