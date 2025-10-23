@@ -1,7 +1,8 @@
 from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QMainWindow, QTabWidget, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QShortcut
-from PyQt5.QtWebEngineWidgets import QWebEngineProfile
-from PyQt5.QtCore import QUrl
+from PyQt5.QtWidgets import QMainWindow, QTabWidget, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, \
+    QShortcut, QDockWidget
+from PyQt5.QtWebEngineWidgets import QWebEngineProfile, QWebEngineView, QWebEnginePage
+from PyQt5.QtCore import QUrl, Qt
 
 from LazyBrowserTab import LazyBrowserTab
 from session import save_full_session
@@ -16,6 +17,9 @@ class BrowserWindow(QMainWindow):
     def __init__(self, profile: QWebEngineProfile, tabs_urls=None):
         super().__init__()
         self.profile = profile
+        self.profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
+        self.profile.setCachePath("cache")
+        self.profile.setPersistentCookiesPolicy(QWebEngineProfile.ForcePersistentCookies)
         self.tabs_urls = tabs_urls or []
         self.setWindowTitle("Wojtek746 Browser")
         self.resize(1400, 700)
@@ -95,8 +99,19 @@ class BrowserWindow(QMainWindow):
         else:
             self.add_tab(SRTART_TAB)
 
+        # ---------------- Skróty klawiszowe ----------------
+
         shortcut_new = QShortcut(QKeySequence("Ctrl+N"), self)
         shortcut_new.activated.connect(lambda: self.add_tab(SRTART_TAB))
+
+        shortcut_devtools = QShortcut(QKeySequence("F12"), self)
+        shortcut_devtools.activated.connect(self.open_devtools)
+
+        shortcut_devtools2 = QShortcut(QKeySequence("Ctrl+Shift+C"), self)
+        shortcut_devtools2.activated.connect(self.open_devtools)
+
+        refresh_tab = QShortcut(QKeySequence("F5"), self)
+        refresh_tab.activated.connect(self.refresh_tab)
 
         BrowserWindow.instances.append(self)
 
@@ -209,6 +224,43 @@ class BrowserWindow(QMainWindow):
                 real_tab.view.urlChanged.connect(lambda qurl, rt=real_tab: (self.addr.setText(qurl.toString()) if self.tabs.currentWidget() is rt else None))
             except Exception:
                 pass
+        self._update_devtools_target(index)
+
+
+    def _update_devtools_target(self, index):
+        if not hasattr(self, "_devtools_dock") or not self._devtools_dock:
+            return
+        if not hasattr(self, "_devtools_page"):
+            return
+
+        cur = self.tabs.widget(index)
+        if cur and hasattr(cur, "view"):
+            self._devtools_page.setInspectedPage(cur.view.page())
+
+    def open_devtools(self):
+        view = self.current_view()
+        if not view:
+            return
+
+        if hasattr(self, "_devtools_dock") and self._devtools_dock:
+            self._devtools_dock.hide()
+            self._devtools_dock = None
+            return
+
+        dev_view = QWebEngineView(self)
+        dev_page = QWebEnginePage(self.profile, self)
+        dev_view.setPage(dev_page)
+        dev_page.setInspectedPage(view.page())
+
+        dock = QDockWidget("DevTools", self)
+        dock.setWidget(dev_view)
+        dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.BottomDockWidgetArea)
+        self.addDockWidget(Qt.RightDockWidgetArea, dock)
+        dock.setFloating(False)
+
+        self._devtools_dock = dock
+        self._devtools_page = dev_page
+        self.resizeDocks([dock], [int(2/5*self.width())], Qt.Horizontal)
 
     def open_new_window(self):
         w = BrowserWindow(self.profile, tabs_urls=["https://www.google.com"])

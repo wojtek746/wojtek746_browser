@@ -3,7 +3,8 @@ import os
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineProfile, QWebEnginePage
-from PyQt5.QtCore import QUrl
+from PyQt5.QtCore import QUrl, Qt
+
 
 class BrowserTab(QWidget):
     def __init__(self, profile: QWebEngineProfile, url="about:blank"):

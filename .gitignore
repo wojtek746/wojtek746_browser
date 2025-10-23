@@ -4,3 +4,4 @@ __pycache__/
 browser_cache/
 session_titles.json
 session_icons/
+cache/
