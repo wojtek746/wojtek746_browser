@@ -1,10 +1,10 @@
 import json
 import os
 
-from PyQt5.QtGui import QIcon, QPixmap
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineProfile
-from PyQt5.QtCore import QUrl, pyqtSignal
+from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtWidgets import QWidget
+from PyQt6.QtWebEngineCore import QWebEngineProfile
+from PyQt6.QtCore import QUrl
 
 
 class LazyBrowserTab(QWidget):
@@ -49,4 +49,4 @@ class LazyBrowserTab(QWidget):
     def setUrl(self, url):
         self.url = url
         if self.view:
-            self.view.url(QUrl(url))
+            self.view._url = QUrl(url)

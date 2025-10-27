@@ -1,6 +1,6 @@
-from PyQt5.QtCore import pyqtSignal, Qt, QRect
-from PyQt5.QtGui import QPainter, QPen, QFont
-from PyQt5.QtWidgets import QTabBar, QMenu
+from PyQt6.QtCore import pyqtSignal, Qt, QRect
+from PyQt6.QtGui import QPainter, QPen, QFont
+from PyQt6.QtWidgets import QTabBar, QMenu
 
 
 class TabBar(QTabBar):
@@ -14,13 +14,13 @@ class TabBar(QTabBar):
         self._plus_margin = 6
         self._min_tab_width = 20
         self._max_tab_width = 100
-        self.setCursor(Qt.ArrowCursor)
-        self.setElideMode(Qt.ElideRight)
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.setElideMode(Qt.TextElideMode.ElideRight)
         self.setExpanding(False)
         self.setMovable(True)
         self._last_plus_rect = QRect()
 
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._open_context_menu)
 
     def _open_context_menu(self, pos):
@@ -53,7 +53,7 @@ class TabBar(QTabBar):
         super().paintEvent(event)
 
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         last_rect = QRect(0,0,0,0)
         if self.count() > 0:
@@ -65,7 +65,7 @@ class TabBar(QTabBar):
         plus_y = 4
         plus_rect = QRect(plus_x, plus_y, plus_w, plus_h)
 
-        painter.setPen(Qt.NoPen)
+        painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(self.palette().window())
 
         pen = QPen()
@@ -79,7 +79,7 @@ class TabBar(QTabBar):
         font.setBold(True)
         font.setPointSize(10)
         painter.setFont(font)
-        painter.drawText(plus_rect, Qt.AlignCenter, "+")
+        painter.drawText(plus_rect, Qt.AlignmentFlag.AlignCenter, "+")
 
         painter.end()
 
@@ -91,7 +91,7 @@ class TabBar(QTabBar):
             # emit signal to add a tab
             self.addTabRequested.emit()
             return
-        if event.button() == Qt.MiddleButton:
+        if event.button() == Qt.MouseButton.MiddleButton:
             idx = self.tabAt(pos)
             if idx != -1:
                 self.closeTabRequested.emit(idx)

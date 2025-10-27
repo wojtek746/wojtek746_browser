@@ -1,6 +1,6 @@
 import json
 import os
-from PyQt5.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap
 
 SESSION_FILE = "session.json"
 IMG_DIR = "img"

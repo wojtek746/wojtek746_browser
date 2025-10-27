@@ -1,12 +1,12 @@
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QMainWindow, QTabWidget, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, \
-    QShortcut, QDockWidget
-from PyQt5.QtWebEngineWidgets import QWebEngineProfile, QWebEngineView, QWebEnginePage
-from PyQt5.QtCore import QUrl, Qt
+from PyQt6.QtGui import QKeySequence, QPalette, QColor, QShortcut
+from PyQt6.QtWidgets import QMainWindow, QTabWidget, QLineEdit, QPushButton, QWidget, QVBoxLayout, QHBoxLayout, QDockWidget
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
+from PyQt6.QtCore import QUrl, Qt
 
 from LazyBrowserTab import LazyBrowserTab
 from session import save_full_session
-from BrowserTab import BrowserTab
+from BrowserTab import BrowserTab, USER_INFO
 from TabBar import TabBar
 
 SRTART_TAB = "https://www.google.com"
@@ -17,9 +17,6 @@ class BrowserWindow(QMainWindow):
     def __init__(self, profile: QWebEngineProfile, tabs_urls=None):
         super().__init__()
         self.profile = profile
-        self.profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
-        self.profile.setCachePath("cache")
-        self.profile.setPersistentCookiesPolicy(QWebEngineProfile.ForcePersistentCookies)
         self.tabs_urls = tabs_urls or []
         self.setWindowTitle("Wojtek746 Browser")
         self.resize(1400, 700)
@@ -80,6 +77,8 @@ class BrowserWindow(QMainWindow):
         container_layout.addWidget(urls)
         container_layout.addWidget(self.tabs)
 
+        self.def_palette()
+
         self.setCentralWidget(container)
         self.showMaximized()
 
@@ -115,6 +114,44 @@ class BrowserWindow(QMainWindow):
 
         BrowserWindow.instances.append(self)
 
+    def def_palette(self):
+        palette = QPalette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(30, 30, 30))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(220, 220, 220))
+        palette.setColor(QPalette.ColorRole.Base, QColor(20, 20, 20))
+        palette.setColor(QPalette.ColorRole.AlternateBase, QColor(35, 35, 35))
+        palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(220, 220, 220))
+        palette.setColor(QPalette.ColorRole.ToolTipText, QColor(20, 20, 20))
+        palette.setColor(QPalette.ColorRole.Text, QColor(220, 220, 220))
+        palette.setColor(QPalette.ColorRole.Button, QColor(45, 45, 45))
+        palette.setColor(QPalette.ColorRole.ButtonText, QColor(220, 220, 220))
+        palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
+        palette.setColor(QPalette.ColorRole.Highlight, QColor(0, 120, 215))
+        palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
+
+        self.setPalette(palette)
+        self.setStyleSheet("""
+            QLineEdit, QMenu, QTabBar::tab, QPushButton {
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+                border: 1px solid #444;
+            }
+            QLineEdit:focus, QPushButton:hover {
+                border: 1px solid #666;
+            }
+            QTabBar::tab:selected {
+                background-color: #444;
+            }
+        """)
+
+        self.profile.settings().setAttribute(QWebEngineSettings.WebAttribute.AutoLoadImages, True)
+        self.profile.settings().setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+        self.profile.settings().setAttribute(QWebEngineSettings.WebAttribute.AutoLoadIconsForPage, True)
+        self.profile.settings().setAttribute(QWebEngineSettings.WebAttribute.FullScreenSupportEnabled, True)
+        self.profile.settings().setAttribute(QWebEngineSettings.WebAttribute.AllowRunningInsecureContent, True)
+
+        self.profile.setHttpUserAgent(USER_INFO)
+
     def add_tab(self, url="about:blank", suspended=False, *args, **kwargs):
         if isinstance(url, bool):
             url = "about:blank"
@@ -131,7 +168,8 @@ class BrowserWindow(QMainWindow):
             icon = None
 
         i = self.tabs.addTab(tab, "")
-        self.tabs.setCurrentIndex(i)
+        if not suspended:
+            self.tabs.setCurrentIndex(i)
 
         idx = self.custom_tab_bar.addTab(title)
         self.custom_tab_bar.setCurrentIndex(idx)
@@ -197,7 +235,7 @@ class BrowserWindow(QMainWindow):
         if not text:
             return
         if not text.startswith("http"):
-            text = "http://" + text
+            text = "https://" + text
         cur = self.tabs.currentWidget()
         if cur:
             cur.view.setUrl(QUrl(text))
@@ -254,13 +292,13 @@ class BrowserWindow(QMainWindow):
 
         dock = QDockWidget("DevTools", self)
         dock.setWidget(dev_view)
-        dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.BottomDockWidgetArea)
-        self.addDockWidget(Qt.RightDockWidgetArea, dock)
+        dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
         dock.setFloating(False)
 
         self._devtools_dock = dock
         self._devtools_page = dev_page
-        self.resizeDocks([dock], [int(2/5*self.width())], Qt.Horizontal)
+        self.resizeDocks([dock], [int(2/5*self.width())], Qt.Orientation.Horizontal)
 
     def open_new_window(self):
         w = BrowserWindow(self.profile, tabs_urls=["https://www.google.com"])
@@ -292,37 +330,29 @@ class BrowserWindow(QMainWindow):
             v.reload()
 
     def _set_tab_text_safe(self, tab_obj, text=None):
-        try:
-            idx = self.tabs.indexOf(tab_obj)
-            if idx == -1:
-                return
-            if text is None:
-                # spróbuj pobrać tytuł z view, potem host z url
-                if hasattr(tab_obj, "view") and tab_obj.view:
-                    t = tab_obj.view.title()
-                    text = t if t else QUrl(tab_obj.view.url().toString()).host()
-                else:
-                    text = QUrl(getattr(tab_obj, "url", "") or "").host()
-            # jeśli masz custom_tab_bar, aktualizuj jego etykietę, inaczej QTabWidget
-            if hasattr(self, "custom_tab_bar"):
-                if idx < self.custom_tab_bar.count():
-                    self.custom_tab_bar.setTabText(idx, text)
+        idx = self.tabs.indexOf(tab_obj)
+        if idx == -1:
+            return
+        if text is None:
+            if hasattr(tab_obj, "view") and tab_obj.view:
+                t = tab_obj.view.title()
+                text = t if t else QUrl(tab_obj.view.url().toString()).host()
             else:
-                self.tabs.setTabText(idx, text)
-        except Exception:
-            pass
+                text = QUrl(getattr(tab_obj, "url", "") or "").host()
+        if hasattr(self, "custom_tab_bar"):
+            if idx < self.custom_tab_bar.count():
+                self.custom_tab_bar.setTabText(idx, text)
+        else:
+            self.tabs.setTabText(idx, text)
 
     def _set_tab_icon_safe(self, tab_obj, icon):
-        try:
-            idx = self.tabs.indexOf(tab_obj)
-            if idx == -1:
-                return
-            if icon is None:
-                return
-            if hasattr(self, "custom_tab_bar"):
-                if idx < self.custom_tab_bar.count():
-                    self.custom_tab_bar.setTabIcon(idx, icon)
-            else:
-                self.tabs.setTabIcon(idx, icon)
-        except Exception:
-            pass
+        idx = self.tabs.indexOf(tab_obj)
+        if idx == -1:
+            return
+        if icon is None:
+            return
+        if hasattr(self, "custom_tab_bar"):
+            if idx < self.custom_tab_bar.count():
+                self.custom_tab_bar.setTabIcon(idx, icon)
+        else:
+            self.tabs.setTabIcon(idx, icon)
